@@ -47,7 +47,7 @@ public final class JobManagerImpl extends WorldSavedData {
     private final Map<NBTTagCompound, JobBlockData> nbtToData = new HashMap<>();
 
     // Lookup table for jobs by chunk. Only contains loaded chunks.
-    private final TLongObjectMap<JobChunkStorage> chunkData = new TLongObjectHashMap<>();
+    private final Map<Long, JobChunkStorage> chunkData = new HashMap<>();
 
     JobManagerImpl() {
         super(ID);
@@ -75,7 +75,9 @@ public final class JobManagerImpl extends WorldSavedData {
 
     void updateJobs(final World world) {
         totalOps = 0;
-        chunkData.forEachEntry((key, storage) -> {
+        for (Map.Entry<Long, JobChunkStorage> entry : chunkData.entrySet()) {
+            final Long key = entry.getKey();
+            final JobChunkStorage storage = entry.getValue();
             chunkOps = 0;
 
             final ChunkPos chunkPos = ChunkUtils.longToChunkPos(key);
@@ -100,8 +102,10 @@ public final class JobManagerImpl extends WorldSavedData {
             }
 
             // Stop once we hit the cap of total operations.
-            return totalOps < Settings.maxWorldOperationsPerTick;
-        });
+            if (totalOps >= Settings.maxWorldOperationsPerTick) {
+                break;
+            }
+        }
     }
 
     void loadChunk(final ChunkPos chunk, final NBTTagCompound data) {
